@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+<!-- Styles -->
+<style>
+  .tweet-row {
+    border-bottom: 1px solid #d8e0e7;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+  }
+  .tweet-row:hover {
+    background-color: #e8f5fe;
+  }
+  .profile-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .username {
+    font-weight: bold;
+    color: #14171a;
+  }
+  .handle {
+    color: gray;
+    font-size: 0.9em;
+  }
+  .hashtag {
+    color: #1da1f2;
+    cursor: pointer;
+    margin-right: 6px;
+  }
+  .hashtag:hover {
+    text-decoration: underline;
+  }
+  .like-button {
+    font-size: 12px;
+    color: #e0245e;
+    cursor: pointer;
+    float: right;
+  }
+  body.dark-mode #birdnoise-app {
+    background-color: #15202b;
+    color: #e1e8ed;
+  }
+  body.dark-mode .tweet-row {
+    border-bottom: 1px solid #253341;
+  }
+  body.dark-mode .tweet-row:hover {
+    background-color: #22303c;
+  }
+  body.dark-mode .username {
+    color: #fff;
+  }
+  .hidden {
+    display: none;
+  }
+</style>
+
+<div id="birdnoise-app" style="width: 520px; font-family: Arial, sans-serif; background-color: #f5f8fa; border: 2px solid #1da1f2; border-radius: 10px; overflow: hidden; box-shadow: 0 0 8px rgba(0,0,0,0.1);">
+  <!-- Header -->
+  <div style="background-color: #1da1f2; color: white; padding: 12px; font-size: 20px; font-weight: bold; text-align: center; position: relative;">
+    🐦 BirdNoise
+    <button onclick="toggleDarkMode()" style="position: absolute; right: 12px; top: 10px; background: white; color: #1da1f2; border: none; padding: 4px 8px; font-size: 12px; border-radius: 6px; cursor: pointer;">Toggle Dark</button>
+  </div>
+
+  <!-- Tweets Table -->
+  <table style="width: 100%; border-collapse: collapse;" id="birdnoise-feed">
+    <!-- Tweet Template Injected by JS -->
+  </table>
+
+  <!-- New Tweet Button -->
+  <div style="text-align: center; padding: 12px;">
+    <button onclick="openNewTweet()" style="background-color: #1da1f2; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">+ New Tweet</button>
+  </div>
+</div>
+
+<!-- New Tweet Modal -->
+<div id="tweetModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 2px solid #1da1f2; border-radius: 8px; padding: 20px; z-index: 1000; width: 300px; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
+  <h3 style="margin-top: 0;">New Tweet</h3>
+  <textarea id="tweetText" placeholder="What's brewing?" style="width: 100%; height: 80px; margin-bottom: 10px;"></textarea>
+  <input type="password" id="tweetPassword" placeholder="Mayor password" style="width: 100%; margin-bottom: 10px;" />
+  <div id="tweetError" class="hidden" style="color: red; font-size: 0.9em; margin-bottom: 8px;">Incorrect password. Only the Mayor can post.</div>
+  <br>
+  <button onclick="postTweet()" style="background-color: #1da1f2; color: white; border: none; padding: 6px 12px; border-radius: 4px;">Post</button>
+  <button onclick="closeNewTweet()" style="margin-left: 8px;">Cancel</button>
+</div>
+
+<!-- Modal Background -->
+<div id="modalBackdrop" onclick="closeNewTweet()" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); z-index: 999;"></div>
+
+<!-- Scripts -->
+<script>
+  const MAYOR_PASSWORD = "howlmoon2025";
+
+  const tweets = [
+    {
+      user: "Mayor Amaliare",
+      handle: "@amaliare_mayor",
+      time: "2h",
+      text: "Summoning circles need a permit. 🧹🗿",
+      hashtags: ["#SaintMinervaCity", "#Witchlife", "#CityHallThings"],
+      likes: 0,
+      avatar: "https://stminervacity.uwu.ai/assets/images/image48.jpg?v=c7142bea"
+    },
+    {
+      user: "El Lobo Azul",
+      handle: "@loboazul26",
+      time: "4h",
+      text: "Early morning run through Fogvale Park. Saw three ghosts and beat my record. 🐺🏃‍♂️",
+      hashtags: ["#SaintMinervaTraining", "#LuchaLibre", "#GhostsAreFriends"],
+      likes: 2,
+      avatar: "https://stminervacity.uwu.ai/assets/images/image310.jpg?v=f401dd19"
+    },
+    {
+      user: "Library Spirit",
+      handle: "@whispers_in_stacks",
+      time: "6h",
+      text: "Please stop rearranging the spellbooks by color. Knowledge demands order. 📚🧠",
+      hashtags: ["#SaintMinervaLibrary", "#SpectralStaff", "#KnowledgeFirst"],
+      likes: 1,
+      avatar: "https://stminervacity.uwu.ai/assets/images/image32.jpg?v=f401dd19"
+    }
+    
+  ];
+
+  function renderTweets() {
+    const table = document.getElementById("birdnoise-feed");
+    table.innerHTML = "";
+    tweets.forEach((tweet, i) => {
+      const row = document.createElement("tr");
+      row.className = "tweet-row";
+      row.innerHTML = `
+        <td style="padding: 12px; display: flex; align-items: flex-start;">
+          <img src="${tweet.avatar}" alt="avatar" class="profile-img">
+          <div style="flex: 1;">
+            <span class="username">${tweet.user}</span> <span class="handle">${tweet.handle} · ${tweet.time}</span>
+            <span class="like-button" onclick="likeTweet(${i}, event)">❤️ ${tweet.likes}</span><br>
+            ${tweet.text}<br>
+            ${tweet.hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join(" ")}
+          </div>
+        </td>
+      `;
+      table.appendChild(row);
+    });
+  }
+
+  function likeTweet(index, event) {
+    event.stopPropagation();
+    tweets[index].likes++;
+    renderTweets();
+  }
+
+  function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
+  }
+
+  function openNewTweet() {
+    document.getElementById("tweetModal").style.display = "block";
+    document.getElementById("modalBackdrop").style.display = "block";
+  }
+
+  function closeNewTweet() {
+    document.getElementById("tweetModal").style.display = "none";
+    document.getElementById("modalBackdrop").style.display = "none";
+    document.getElementById("tweetError").classList.add("hidden");
+  }
+
+  function postTweet() {
+    const text = document.getElementById("tweetText").value.trim();
+    const password = document.getElementById("tweetPassword").value;
+    const error = document.getElementById("tweetError");
+
+    if (!text) return;
+
+    if (password !== MAYOR_PASSWORD) {
+      error.classList.remove("hidden");
+      return;
+    }
+
+    tweets.unshift({
+      user: "Mayor Amaliare",
+      handle: "@amaliare_mayor",
+      time: "just now",
+      text: text,
+      hashtags: text.match(/#[a-zA-Z0-9_]+/g) || [],
+      likes: 0,
+      avatar: "https://stminervacity.uwu.ai/assets/images/image48.jpg?v=c7142bea"
+    });
+
+    document.getElementById("tweetText").value = "";
+    document.getElementById("tweetPassword").value = "";
+    closeNewTweet();
+    renderTweets();
+  }
+
+  renderTweets();
+</script>
+
+
+
+</body>
+</html>
+
+
